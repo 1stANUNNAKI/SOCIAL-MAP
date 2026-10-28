@@ -1,0 +1,19 @@
+{
+  "name": "cityrt-prototype",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive 3D Procedural City Model inspired by CityRT (skylines-sketch): SDF Terrain, 4 Architectural Districts, Dynamic Multilingual Sign Atlas, NPR Pencil Hatching Shaders, Traffic & Pedestrians, 24h Atmosphere, and 3 Navigation Modes (Orbit, Walk, Drive).",
+  "scripts": {
+    "dev": "vite --port 5180",
+    "build": "vite build",
+    "preview": "vite preview --port 5180",
+    "verify": "node scripts/verify-architecture.mjs"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
