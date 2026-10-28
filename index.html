@@ -1,346 +1,909 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CityRT Prototype — نموذج المدينة الحية ثلاثي الأبعاد</title>
-    <style>
-      :root {
-        --paper: rgba(243, 237, 224, 0.92);
-        --paper-solid: #f3ede0;
-        --ink: #2a2320;
-        --ink-muted: #655850;
-        --accent: #b85d3b;
-        --accent-active: #1e6b5c;
-        --border: rgba(42, 35, 32, 0.22);
-      }
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="نظام SMI (SMI.basharTwaij.com) - نظام جي بي إس واقعي يربط بين خدمات النقل والتوصيل والتجارة الإلكترونية والخرائط والملاحة في العراق، من تطوير المبرمج بشار تويج (BasharTwaij.com)">
+  <meta name="author" content="بشار تويج - Bashar Twaij (BasharTwaij.com)">
+  <link rel="canonical" href="https://smi.bashartwaij.com/">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230284c7'/><text y='66' x='50' text-anchor='middle' font-size='44' font-weight='bold' fill='white'>SMI</text></svg>">
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-        user-select: none;
-      }
+  <!-- وسوم المشاركة الاجتماعية (OpenGraph / WhatsApp / Telegram / X) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SMI Iraq">
+  <meta property="og:url" content="https://smi.bashartwaij.com/">
+  <meta property="og:title" content="SMI | نظام الخرائط والملاحة والنقل والتجارة في العراق (SMI.basharTwaij.com)">
+  <meta property="og:description" content="نظام جي بي إس واقعي ثلاثي الأبعاد يربط بين خدمات النقل والتوصيل والتجارة الإلكترونية والخرائط والتجول الحي في العراق — تصميم وبرمجة بشار تويج (BasharTwaij.com)">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SMI | نظام الخرائط والملاحة والنقل والتجارة في العراق">
+  <meta name="twitter:description" content="نظام جي بي إس واقعي يربط بين خدمات النقل والتوصيل والتجارة الإلكترونية والخرائط والملاحة في العراق (SMI.basharTwaij.com)">
 
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #ebe3d0;
-        font-family: "Segoe UI", "Tahoma", system-ui, sans-serif;
-        color: var(--ink);
-      }
+  <title>SMI | نظام الخرائط والملاحة والنقل والتجارة في العراق (SMI.basharTwaij.com)</title>
 
-      #city-canvas {
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        display: block;
-        cursor: grab;
-      }
+  <!-- تعريف خريطة استيراد حزم Three.js الحديثة (Import Map) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 
-      #city-canvas:active {
-        cursor: grabbing;
-      }
+  <!-- ورقة أنماط Leaflet الرسمية -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- ملف تعريف تطبيق الويب PWA للعمل أوفلاين -->
+  <link rel="manifest" href="./manifest.json">
 
-      /* Hand-drawn paper vignette & ink grain overlay */
-      #paper-overlay {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 2;
-        box-shadow: inset 0 0 85px rgba(42, 35, 32, 0.22);
-        transition: opacity 0.3s ease;
-      }
+  <!-- الأنماط الخاصة بالتطبيق -->
+  <link rel="stylesheet" href="./css/style.css?v=16">
+  <script>
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(k) {
+          if ((k.indexOf('openmapiq-static') !== -1 || k.indexOf('smi-static') !== -1) && k !== 'smi-static-v16') {
+            caches.delete(k);
+          }
+        });
+      });
+    }
+  </script>
+</head>
+<body>
 
-      /* Minimal Architectural Navigation & Environment Dock */
-      .hud-layer {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: 16px;
-        transition: opacity 0.25s ease;
-      }
+  <div id="app-container">
 
-      .hud-layer.hidden {
-        opacity: 0;
-        pointer-events: none !important;
-      }
+    <!-- القائمة الجانبية مغلقة افتراضياً (collapsed) ولا تفتح إلا عند ضغط المستخدم على زرها -->
+    <aside id="sidebar" class="sidebar collapsed">
+      <div class="sidebar-header">
+        <h3><span>📋</span> النقاط والمحفوظات</h3>
+        <button id="closeSidebarBtn" class="icon-action-btn" title="إغلاق القائمة">✖️</button>
+      </div>
 
-      .hud-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
+      <div class="sidebar-stats">
+        <div class="stat-chip">
+          <span>النقاط المحفوظة</span>
+          <strong id="totalPlacesCount">0</strong>
+        </div>
+        <div class="stat-chip">
+          <span>المحافظات المغطاة</span>
+          <strong id="coveredGovsCount">0</strong>
+        </div>
+      </div>
 
-      .sketch-card {
-        pointer-events: auto;
-        background: var(--paper);
-        backdrop-filter: blur(8px);
-        border: 2px solid var(--ink);
-        border-radius: 10px 14px 11px 13px;
-        box-shadow: 4px 4px 0 rgba(42, 35, 32, 0.18);
-        padding: 12px 16px;
-      }
+      <!-- تبويبات التصفية -->
+      <div class="filter-tabs">
+        <button class="filter-tab-btn active" data-filter="all">الكل</button>
+        <button class="filter-tab-btn" data-filter="personal">شخصي</button>
+        <button class="filter-tab-btn" data-filter="landmark">معالم</button>
+        <button class="filter-tab-btn" data-filter="history">تاريخ</button>
+        <button class="filter-tab-btn" data-filter="work">عمل</button>
+        <button class="filter-tab-btn" data-filter="emergency">طوارئ</button>
+      </div>
 
-      .brand-panel h1 {
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        color: var(--ink);
-      }
+      <!-- قائمة العناصر المحفوظة في المتصفح -->
+      <div id="placesListContainer" class="places-list-container"></div>
 
-      .brand-panel p {
-        font-size: 12.5px;
-        color: var(--ink-muted);
-        margin-top: 2px;
-      }
+      <!-- أزرار النسخ الاحتياطي والاستيراد -->
+      <div class="sidebar-footer">
+        <button id="exportGeoJsonBtn" class="btn btn-secondary" title="تصدير كملف نظم معلومات جغرافية">
+          <span>💾</span> GeoJSON
+        </button>
+        <button id="exportCsvBtn" class="btn btn-secondary" title="تصدير كملف Excel">
+          <span>📊</span> CSV
+        </button>
+        <button id="importFileBtn" class="btn btn-primary" title="استيراد نقاط وملاحظات سابقة">
+          <span>📥</span> استيراد
+        </button>
+        <input type="file" id="importFileInput" accept=".json,.geojson" style="display: none;">
+      </div>
+    </aside>
 
-      /* Navigation Mode Switcher */
-      .nav-modes {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
+    <!-- طبقة الخلفية للقائمة في الموبايل -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 
-      .sketch-btn {
-        pointer-events: auto;
-        appearance: none;
-        background: var(--paper-solid);
-        color: var(--ink);
-        border: 1.8px solid var(--ink);
-        border-radius: 8px 11px 9px 10px;
-        padding: 7px 13px;
-        font-family: inherit;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        box-shadow: 2px 2px 0 rgba(42, 35, 32, 0.16);
-        transition: transform 0.1s ease, background 0.15s ease;
-      }
-
-      .sketch-btn:hover {
-        background: #e9dec8;
-        transform: translateY(-1px);
-      }
-
-      .sketch-btn.active {
-        background: var(--ink);
-        color: var(--paper-solid);
-      }
-
-      .sketch-btn kbd {
-        background: rgba(128, 120, 110, 0.22);
-        padding: 1px 5px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-family: monospace;
-      }
-
-      /* Bottom Environment & District Bar */
-      .hud-bottom {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-
-      .env-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        align-items: center;
-      }
-
-      .ctrl-group {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      .ctrl-group label {
-        font-size: 11.5px;
-        font-weight: 700;
-        color: var(--ink-muted);
-      }
-
-      .ctrl-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      select.sketch-select,
-      input[type="range"] {
-        pointer-events: auto;
-        font-family: inherit;
-        font-size: 12.5px;
-        font-weight: 600;
-        color: var(--ink);
-        background: var(--paper-solid);
-        border: 1.6px solid var(--ink);
-        border-radius: 7px;
-        padding: 4px 8px;
-        cursor: pointer;
-      }
-
-      input[type="range"] {
-        width: 115px;
-        accent-color: var(--accent);
-        padding: 0;
-      }
-
-      .districts-bar {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-
-      /* Focused building / active mode toast */
-      #status-banner {
-        position: fixed;
-        top: 84px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 12;
-        pointer-events: none;
-        background: var(--paper);
-        border: 2px solid var(--ink);
-        border-radius: 9px 12px 10px 11px;
-        padding: 8px 16px;
-        font-size: 13px;
-        font-weight: 700;
-        box-shadow: 3px 3px 0 rgba(42, 35, 32, 0.18);
-        transition: opacity 0.2s ease;
-      }
-
-      /* Floating button to restore HUD when hidden */
-      #toggle-hud-btn {
-        position: fixed;
-        bottom: 16px;
-        left: 16px;
-        z-index: 25;
-        pointer-events: auto;
-      }
-    </style>
-  </head>
-  <body>
-    <canvas id="city-canvas"></canvas>
-    <div id="paper-overlay"></div>
-
-    <div id="status-banner">
-      طور التحليق الحر — اسحب الفأرة للتنقل، انقر مرتين على أي مبنى للتركيز عليه، أو اضغط <kbd>G</kbd> للنزول إلى الشارع
-    </div>
-
-    <div class="hud-layer" id="hud-layer">
-      <!-- Top Bar: Title + 3 Navigation Modes -->
-      <div class="hud-top">
-        <div class="sketch-card brand-panel">
-          <h1>نموذج مدينة CityRT الثلاثي الأبعاد</h1>
-          <p id="clock-readout">الساعة 10:30 صباحاً · 4 أحياء معمارية · نهر Catmull-Rom SDF · حركة مرور ومشاة حية</p>
+    <!-- مساحة الخريطة المستقلة والأشرطة العائمة -->
+    <div class="map-viewport-wrapper">
+      
+      <!-- شريط التنقل العلوي الذكي فوق الخريطة مباشرة -->
+      <header class="top-navbar">
+        <!-- شعار نظام SMI مع زر علامة التعجب (!) التعريفي -->
+        <div class="brand-badge">
+          <span class="brand-icon">🇮🇶</span>
+          <div class="brand-text">
+            <h1>SMI</h1>
+          </div>
+          <button id="aboutOmiBtn" class="omi-info-btn" title="حول نظام SMI والمبرمج بشار تويج (SMI.basharTwaij.com)" aria-label="حول نظام SMI">!</button>
         </div>
 
-        <div class="sketch-card nav-modes">
-          <button type="button" class="sketch-btn active" id="btn-mode-orbit">
-            <span>تحليق حر (كاميرا العمدة)</span>
-            <kbd>Esc</kbd>
+        <!-- محرك البحث السريع -->
+        <div class="search-box-container">
+          <div class="search-input-wrapper">
+            <span>🔍</span>
+            <input type="text" id="quickSearchInput" placeholder="ابحث عن محافظة، بناية، مجموعة، مول، أو شارع..." autocomplete="off">
+          </div>
+          <div id="searchResultsDropdown" class="search-results-dropdown"></div>
+        </div>
+
+        <!-- القائمة العلوية المنسدلة للأزرار: مفتوحة جاهزة وتضم زر المتحكم 🎮 للتجول الحي -->
+        <div id="topActionsContainer" class="top-actions-collapsible open">
+          <button id="topActionsMenuBtn" class="action-btn icon-only menu-trigger-btn primary-glow" title="فتح/إغلاق قائمة الأدوات العلوية" aria-label="قائمة الأدوات العلوية" aria-expanded="true">
+            <span class="trigger-icon">⚡</span>
           </button>
-          <button type="button" class="sketch-btn" id="btn-mode-walk">
-            <span>تجول على الأقدام</span>
-            <kbd>G</kbd>
+          <div id="topActionsList" class="top-actions-list">
+            <button id="fitIraqBtn" class="action-btn icon-only" title="توسيط كامل خارطة العراق" aria-label="كامل العراق">
+              <span>🗺️</span>
+            </button>
+            <button id="liveRoam3DBtn" class="action-btn icon-only roam-3d-trigger-btn" title="🎮" aria-label="وضع التجول">
+              <span>🎮</span>
+            </button>
+            <button id="view3DMapBtn" class="action-btn icon-only" title="تفعيل/إيقاف الخريطة والمباني ثلاثية الأبعاد" aria-label="خريطة ثلاثية الأبعاد">
+              <span>🧊</span>
+            </button>
+            <button id="dragPinBtn" class="action-btn icon-only" title="وضع دبوس متحرك تفاعلي على الخريطة" aria-label="دبوس متحرك">
+              <svg class="hollow-map-pin-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 10.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 5.5 12 5.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+              </svg>
+            </button>
+            <button id="avatar3DBtn" class="action-btn icon-only" title="اختيار الشخصية أو المجسم" aria-label="شخصية 3D">
+              <span>🚶</span>
+            </button>
+            <button id="routeNavBtn" class="action-btn icon-only" title="تفعيل الملاحة المباشرة بالدبابيس" aria-label="مسار الملاحة">
+              <span>🧭</span>
+            </button>
+            <button id="offlinePackBtn" class="action-btn icon-only" title="تحميل وتثبيت خريطة العراق للعمل أوفلاين &#x200F;( PWA )&#x200F;" aria-label="أوفلاين PWA">
+              <span>📥</span>
+            </button>
+            <button id="menuToggleBtn" class="action-btn icon-only" title="فتح/إغلاق النقاط المحفوظة" aria-label="المحفوظات">
+              <span>📋</span>
+            </button>
+            <button id="themeToggleBtn" class="action-btn icon-only" title="تبديل المظهر الليلي والنهاري" aria-label="تبديل المظهر">
+              <span>🌓</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- شريط التصفية والخدمات المكانية الفورية -->
+      <div id="socialmapQuickFilterBar" class="socialmap-quick-bar">
+        <button type="button" class="sm-quick-chip active" data-sm-filter="all">🌟 كل العراق</button>
+        <button type="button" class="sm-quick-chip" data-sm-filter="restaurant">🍽️ مطاعم ومنيو</button>
+        <button type="button" class="sm-quick-chip" data-sm-filter="mall">🏬 مولات وتسوق</button>
+        <button type="button" class="sm-quick-chip" data-sm-filter="livecam">🔴 بث مباشر حي</button>
+        <button type="button" class="sm-quick-chip" id="smQuickTaxiBtn">🚖 اطلب تكسي هنا</button>
+        <button type="button" class="sm-quick-chip cityrt-highlight icon-only-chip" id="smQuickCityRTBtn" title="🎮">🎮</button>
+      </div>
+
+      <!-- شريط متابعة الرحلة أو التوصيل النشط (Active Taxi / Delivery Status) -->
+      <div id="socialmapActiveRideBar" class="socialmap-active-ride-bar hidden"></div>
+
+      <!-- بطاقة المكان التفاعلية الشاملة (Universal Place Hub Sheet) -->
+      <div id="socialmapPlaceHubSheet" class="socialmap-place-hub-sheet hidden" aria-hidden="true"></div>
+
+      <!-- شريط السلة العائم للتسوق وطلب الطعام (Floating Cart Bar) -->
+      <div id="socialmapCartFloatingBar" class="socialmap-cart-floating-bar hidden">
+        <div class="cart-floating-info">
+          <span class="cart-floating-icon">🛒</span>
+          <div>
+            <strong id="cartFloatingCount">0 قطع في السلة</strong>
+            <small id="cartFloatingTotal">0 د.ع</small>
+          </div>
+        </div>
+        <button type="button" id="openCartCheckoutBtn" class="btn btn-primary cart-checkout-trigger-btn">
+          إتمام الشراء والتوصيل 🛵
+        </button>
+      </div>
+
+      <!-- المشغل العائم المصغر للبث المباشر (Picture-in-Picture Live Cam) -->
+      <div id="socialmapLivePiPWidget" class="socialmap-live-pip-widget hidden">
+        <div class="live-pip-header">
+          <span id="livePiPTitle">🔴 بث مباشر</span>
+          <div class="live-pip-actions">
+            <button type="button" id="livePiPExpandBtn" title="تكبير">⛶</button>
+            <button type="button" id="livePiPCloseBtn" title="إغلاق">✕</button>
+          </div>
+        </div>
+        <canvas id="livePiPCanvas" width="320" height="180"></canvas>
+      </div>
+
+      <!-- مسرح الخريطة المعزول ثلاثي الأبعاد لضمان عدم زحف أو تأثر أشرطة التحكم -->
+      <div id="map3DStage" class="map-3d-stage">
+        <main id="map" role="region" aria-label="نظام SMI - الخرائط والملاحة والنقل والتجارة في العراق"></main>
+      </div>
+
+      <!-- شريط التحكم بالخريطة ثلاثية الأبعاد: مثبت ومستقل عن ميلان الخريطة ليبقى بمتناول المستخدم دائماً -->
+      <div id="map3DControlBar" class="map-3d-control-bar hidden">
+        <span class="bar-3d-badge">🧊 وضع 3D نشط</span>
+        <div class="bar-3d-actions">
+          <button id="enterFullCityRTFromBarBtn" class="bar-3d-btn" style="background: linear-gradient(135deg, #d97706, #f59e0b); color: #fff; font-weight: 800;" title="🎮">🎮</button>
+          <button id="rotate3DLeftBtn" class="bar-3d-btn" title="تدوير الخريطة لليسار">⟲ يسار</button>
+          <button id="rotate3DRightBtn" class="bar-3d-btn" title="تدوير الخريطة لليمين">⟳ يمين</button>
+          <button id="tilt3DToggleBtn" class="bar-3d-btn" title="تغيير زاوية الميلان">📐 زاوية</button>
+          <button id="exit3DViewBtn" class="bar-3d-exit-btn" title="الخروج الفوري والعودة للخريطة العادية 2D">✖️ خروج للوضع 2D</button>
+        </div>
+      </div>
+
+      <!-- قائمة أدوات التحكم الجانبية بالخريطة: زر واحد يفتح/يغلق باقي الأزرار بجانبه -->
+      <div id="sideControlsContainer" class="map-floating-controls">
+        <button id="sideControlsMenuBtn" class="control-btn side-menu-trigger-btn primary-glow" title="فتح/إغلاق أدوات التحكم بالخريطة" aria-label="قائمة أدوات الخريطة" aria-expanded="false">
+          <span class="side-trigger-icon">🎛️</span>
+        </button>
+        <div id="sideControlsList" class="side-controls-list">
+          <button id="locateBtn" class="control-btn" title="تحديد موقعي وبنايتي الحالية عبر الـ GPS" aria-label="موقعي الحالي">
+            <svg class="hollow-map-pin-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 10.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 5.5 12 5.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+            </svg>
           </button>
-          <button type="button" class="sketch-btn" id="btn-mode-drive">
-            <span>ركوب وقيادة سيارة</span>
-            <kbd>E</kbd>
+          <button id="zoomInBtn" class="control-btn" title="تكبير الخريطة لإظهار البنايات والمدن التفصيلية" aria-label="تكبير">
+            ➕
           </button>
-          <button type="button" class="sketch-btn" id="btn-camera-view" title="تبديل منظور الشخص الأول / الثالث">
-            <span id="lbl-camera-view">منظور: خلف الكتف</span>
-            <kbd>V</kbd>
+          <button id="zoomOutBtn" class="control-btn" title="تصغير الخريطة" aria-label="تصغير">
+            ➖
+          </button>
+          <button id="trackToggleBtn" class="control-btn" title="تتبع فضائي مباشر مستمر" aria-label="تتبع مباشر">
+            📡
+          </button>
+          <button id="placesToggleBtn" class="control-btn active" title="إظهار/إخفاء الأماكن والبنايات" aria-label="أسماء الأماكن">
+            🏷️
+          </button>
+          <button id="layersBtn" class="control-btn" title="تبديل نمط وطبقات الخريطة" aria-label="طبقات الخريطة">
+            🛰️
+          </button>
+          <button id="measureBtn" class="control-btn" title="أداة قياس المسافات بين النقاط" aria-label="قياس المسافات">
+            📐
           </button>
         </div>
       </div>
 
-      <!-- Bottom Bar: Quick District Teleport + Atmosphere/Biome/Sketch Variables -->
-      <div class="hud-bottom">
-        <div class="sketch-card">
-          <div class="ctrl-group">
-            <label>انتقال فوري للأحياء والمعالم المعمارية (أو انقر مرتين على أي مبنى):</label>
-            <div class="districts-bar">
-              <button type="button" class="sketch-btn" data-fly="90,-98,48,-0.6">الحي العربي (سوق الزعفران)</button>
-              <button type="button" class="sketch-btn" data-fly="-90,-98,48,0.5">الحي الأوروبي (برج الساعة)</button>
-              <button type="button" class="sketch-btn" data-fly="-88,-44,36,0.3">طاحونة القناة والجسر</button>
-              <button type="button" class="sketch-btn" data-fly="-90,56,46,0.6">الحي الياباني (الباغودا)</button>
-              <button type="button" class="sketch-btn" data-fly="90,56,58,-0.6">حي الأبراج والنيون</button>
-              <button type="button" class="sketch-btn" data-fly="-15,54,42,0.0">الحديقة المركزية والنافورة</button>
+      <!-- بطاقة حالة قياس المسافات -->
+      <div id="measureCard" class="measure-status-card hidden">
+        <span>📐 انقر على الخريطة لحساب المسافة</span>
+        <button id="closeMeasureBtn" class="popup-btn danger">إنهاء القياس</button>
+      </div>
+
+      <!-- لوحة تحكم الملاحة التفاعلية عبر الدبابيس -->
+      <div id="tripDashboard" class="trip-dashboard-card hidden">
+        <div class="trip-header">
+          <div class="trip-title-box">
+            <span class="trip-pulse-icon">🧭</span>
+            <div>
+              <h4 id="tripRouteTitle" class="trip-title">ملاحة تفاعلية عبر الدبابيس</h4>
+              <span id="tripModeBadge" class="trip-badge">اسحب دبوس 🅰️ أو 🏁 أو انقر على أي مكان لتغيير المسار فوراً</span>
             </div>
+          </div>
+          <button id="closeTripDashboardBtn" class="trip-close-btn" title="إنهاء الرحلة">&times;</button>
+        </div>
+        
+        <div class="trip-stats-grid">
+          <div class="trip-stat-item">
+            <span class="trip-stat-label">المسافة المتبقية</span>
+            <strong id="tripRemainingDist" class="trip-stat-value">-- كم</strong>
+          </div>
+          <div class="trip-stat-item">
+            <span class="trip-stat-label">الوقت التقديري</span>
+            <strong id="tripEta" class="trip-stat-value">-- دقيقة</strong>
+          </div>
+          <div class="trip-stat-item">
+            <span class="trip-stat-label">السرعة الحالية</span>
+            <strong id="tripSpeed" class="trip-stat-value">-- كم/س</strong>
+          </div>
+          <div class="trip-stat-item">
+            <span class="trip-stat-label">الاتجاه الحقيقي</span>
+            <strong id="tripBearing" class="trip-stat-value">--</strong>
           </div>
         </div>
 
-        <div class="sketch-card env-controls">
-          <div class="ctrl-group">
-            <label for="time-slider">الوقت والإضاءة (24 ساعة):</label>
-            <div class="ctrl-row">
-              <input type="range" id="time-slider" min="0" max="24" step="0.1" value="10.5" />
-              <button type="button" class="sketch-btn" id="btn-time-auto">دورة تلقائية</button>
+        <div class="trip-actions-row">
+          <button id="simTripBtn" class="btn btn-primary" style="padding: 7px 14px; font-size: 0.82rem;">
+            <span>🚀</span> تحرك على المسار الآن
+          </button>
+          <label class="trip-toggle-label">
+            <input type="checkbox" id="autoFollowCameraToggle" checked>
+            <span>تتبع الكاميرا</span>
+          </label>
+          <button id="endTripActionBtn" class="btn btn-danger" style="padding: 7px 14px; font-size: 0.82rem; background: #ef4444; color: white;">
+            <span>🛑</span> إنهاء المسار
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- شريط الملاحة السفلي للهواتف الذكية -->
+    <nav class="mobile-bottom-bar">
+      <button id="mobileLocateBtn" class="mobile-nav-btn">
+        <span class="icon">
+          <svg class="hollow-map-pin-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 10.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 5.5 12 5.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+          </svg>
+        </span>
+        <span>موقعي</span>
+      </button>
+      <button id="mobileNavPinBtn" class="mobile-nav-btn">
+        <span class="icon">🧭</span>
+        <span>مسار بالدبوس</span>
+      </button>
+      <button id="mobileAddBtn" class="mobile-nav-btn">
+        <span class="icon">
+          <svg class="hollow-map-pin-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 10.5c-1.93 0-3.5-1.57-3.5-3.5S10.07 5.5 12 5.5s3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+          </svg>
+        </span>
+        <span>دبوس جديد</span>
+      </button>
+      <button id="mobileLayersBtn" class="mobile-nav-btn">
+        <span class="icon">🛰️</span>
+        <span>الطبقات</span>
+      </button>
+      <button id="mobileListBtn" class="mobile-nav-btn">
+        <span class="icon">📋</span>
+        <span>المحفوظات</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- صفحة / نافذة تعريفية شاملة: حول نظام SMI ومصممه ومبرمجه بشار تويج (SMI.basharTwaij.com / BasharTwaij.com) -->
+  <div id="aboutOmiModal" class="modal-backdrop">
+    <div class="modal-card wide-modal omi-about-card">
+      <div class="modal-header omi-about-header">
+        <h3><span>🇮🇶</span> نظام SMI — الخرائط والملاحة والنقل والتجارة في العراق</h3>
+        <button class="modal-close-btn" title="إغلاق">&times;</button>
+      </div>
+      <div class="modal-body omi-about-body">
+        <div class="omi-hero-banner">
+          <div class="omi-logo-circle">SMI</div>
+          <div class="omi-hero-text">
+            <h2>نظام SMI الجغرافي والتجاري المتكامل</h2>
+            <p>SMI.basharTwaij.com — نظام GPS واقعي يربط النقل والتوصيل والتجارة الإلكترونية والخرائط في العراق</p>
+          </div>
+        </div>
+
+        <div class="omi-section-block">
+          <h4>🌟 عن نظام SMI &#x200F;( SMI.basharTwaij.com )&#x200F;</h4>
+          <p>
+            <strong>نظام SMI &#x200F;( SMI.basharTwaij.com )&#x200F;</strong> هو نظام جي بي إس &#x200F;( GPS )&#x200F; واقعي متكامل يربط بين خدمات النقل والتوصيل والتجارة الإلكترونية والخرائط والملاحة في العراق. يمكّن المستخدم من عيش تجربة متكاملة لاختبار واختيار وشراء وتجول وتواصل مع الأشخاص والخدمات في مدينته أو باقي المدن العراقية من زاخو إلى الفاو، مع بيئة تجول تفاعلية حية ثلاثية الأبعاد، ومجسمات ذكية، وبث مباشر، وعمل متكامل أوفلاين &#x200F;( PWA )&#x200F;.
+          </p>
+        </div>
+
+        <div class="omi-creator-card">
+          <div class="creator-header">
+            <span class="creator-avatar">👨‍💻</span>
+            <div>
+              <h4>تصميم وبرمجة وتطوير: بشار تويج &#x200F;( Bashar Twaij )&#x200F;</h4>
+              <span class="creator-role">مبتكر ومبرمج مشاريع تقنية وأنظمة ذكية متكاملة</span>
+            </div>
+          </div>
+          <p class="creator-bio">
+            صُمم وطُوّر نظام <strong>SMI</strong> من قبل المبرمج <strong>بشار تويج</strong> ليجمع في منصة واحدة بين الملاحة الجغرافية الدقيقة، وطلب سيارات الأجرة والتوصيل، والتسوق المكاني من المطاعم والمولات، والتجول الحي التفاعلي. يمكنك زيارة موقع المبرمج الرسمي لاستعراض باقي المشاريع والابتكارات التقنية.
+          </p>
+          <div class="creator-links-row" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="https://SMI.basharTwaij.com" target="_blank" rel="noopener noreferrer" class="omi-website-btn" style="background: linear-gradient(135deg, #d97706, #f59e0b); color: #0f172a;">
+              🚀 رابط المشروع الحالي: SMI.basharTwaij.com
+            </a>
+            <a href="https://BasharTwaij.com" target="_blank" rel="noopener noreferrer" class="omi-website-btn">
+              🌐 موقع المبرمج لعرض باقي المشاريع: BasharTwaij.com
+            </a>
+          </div>
+        </div>
+
+        <div class="omi-features-grid">
+          <div class="omi-feature-item">
+            <span>🎮</span>
+            <strong>تجول حي وفيزياء حقيقية</strong>
+            <small>شخصيات ذكية، روبوت بليزر ولغة جاكس، تسلق بنايات وطيران</small>
+          </div>
+          <div class="omi-feature-item">
+            <span>🚖</span>
+            <strong>نقل وتوصيل فوري</strong>
+            <small>طلب سيارات أجرة وتوصيل طلبات مباشرة لأي موقع على الخريطة</small>
+          </div>
+          <div class="omi-feature-item">
+            <span>🛍️</span>
+            <strong>تجارة إلكترونية ومنيو 3D</strong>
+            <small>تصفح المطاعم والمولات والأسواق وشراء المنتجات بمعاينة 360°</small>
+          </div>
+          <div class="omi-feature-item">
+            <span>🔴</span>
+            <strong>بث مباشر وملاحة آلية</strong>
+            <small>كاميرات حية للمواقع وملاحة آلية تنقل شخصيتك عبر الخريطة</small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="https://BasharTwaij.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">🔗 باقي المشاريع: BasharTwaij.com</a>
+        <button type="button" class="btn btn-primary modal-close-btn">العودة إلى خريطة SMI</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة منبثقة: إضافة وتعديل نقطة وملاحظة -->
+  <div id="placeModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="placeModalTitle">إضافة نقطة وملاحظة جغرافية جديدة</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="placeForm">
+        <div class="modal-body">
+          <input type="hidden" id="placeIdInput">
+          
+          <div class="form-group">
+            <label for="placeTitleInput">اسم النقطة أو الموقع *</label>
+            <input type="text" id="placeTitleInput" class="form-control" placeholder="مثال: مجموعة العميد التعليمية، منزلي، ساحة التحرير..." required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="placeGovSelect">المحافظة العراقية</label>
+              <select id="placeGovSelect" class="form-control">
+                <option value="بغداد">بغداد</option>
+                <option value="البصرة">البصرة</option>
+                <option value="نينوى">نينوى &#x200F;( الموصل )&#x200F;</option>
+                <option value="أربيل">أربيل</option>
+                <option value="السليمانية">السليمانية</option>
+                <option value="دهوك">دهوك</option>
+                <option value="كركوك">كركوك</option>
+                <option value="صلاح الدين">صلاح الدين &#x200F;( تكريت - سامراء )&#x200F;</option>
+                <option value="ديالى">ديالى &#x200F;( بعقوبة )&#x200F;</option>
+                <option value="الأنبار">الأنبار &#x200F;( الرمادي - الفلوجة )&#x200F;</option>
+                <option value="بابل">بابل &#x200F;( الحلة )&#x200F;</option>
+                <option value="كربلاء">كربلاء المقدسة</option>
+                <option value="النجف الأشرف">النجف الأشرف</option>
+                <option value="واسط">واسط &#x200F;( الكوت )&#x200F;</option>
+                <option value="الديوانية">الديوانية &#x200F;( القادسية )&#x200F;</option>
+                <option value="ذي قار">ذي قار &#x200F;( الناصرية )&#x200F;</option>
+                <option value="ميسان">ميسان &#x200F;( العمارة )&#x200F;</option>
+                <option value="المثنى">المثنى &#x200F;( السماوة )&#x200F;</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>التصنيف</label>
+              <input type="hidden" id="placeCategoryInput" value="personal">
+              <div class="category-chips-row">
+                <div class="category-chip selected" data-category="personal">📍 شخصي</div>
+                <div class="category-chip" data-category="landmark">🏛️ معلم</div>
+                <div class="category-chip" data-category="history">🏺 تاريخي</div>
+                <div class="category-chip" data-category="work">💼 عمل</div>
+                <div class="category-chip" data-category="emergency">🚨 طوارئ</div>
+              </div>
             </div>
           </div>
 
-          <div class="ctrl-group">
-            <label for="biome-select">الإقليم والغطاء النباتي (Biome):</label>
-            <select id="biome-select" class="sketch-select">
-              <option value="meadow">المروج الخضراء (Meadow)</option>
-              <option value="sakura">ربيع الساكورا (Sakura)</option>
-              <option value="autumn">الخريف الذهبي (Autumn)</option>
-              <option value="desert">الصحراء العربية (Desert)</option>
-              <option value="tundra">التندرا القطبية (Tundra)</option>
-              <option value="tropics">الجزر الاستوائية (Tropics)</option>
-              <option value="mars">كوكب المريخ (Mars)</option>
-              <option value="blueprint">المخطط الهندسي (Blueprint)</option>
-            </select>
+          <div class="form-group">
+            <label>لون تمييز النقطة</label>
+            <input type="hidden" id="placeColorInput" value="#0284c7">
+            <div class="color-picker-row">
+              <div class="color-option selected" style="background: #0284c7;" data-color="#0284c7" title="أزرق دجلة"></div>
+              <div class="color-option" style="background: #10b981;" data-color="#10b981" title="أخضر واحات"></div>
+              <div class="color-option" style="background: #f59e0b;" data-color="#f59e0b" title="ذهبي الرافدين"></div>
+              <div class="color-option" style="background: #ef4444;" data-color="#ef4444" title="أحمر تنبيه"></div>
+              <div class="color-option" style="background: #8b5cf6;" data-color="#8b5cf6" title="أرجواني ملكي"></div>
+              <div class="color-option" style="background: #065f46;" data-color="#065f46" title="أخضر داكن"></div>
+            </div>
           </div>
 
-          <div class="ctrl-group">
-            <label for="weather-select">الطقس والجو:</label>
-            <select id="weather-select" class="sketch-select">
-              <option value="clear">جو صافي ومشمس</option>
-              <option value="rain">أمطار غزيرة (Rain)</option>
-              <option value="snow">ثلوج متساقطة (Snow)</option>
-              <option value="sakura">بتلات أزهار الكرز (Sakura)</option>
-            </select>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="placeLatInput">خط العرض &#x200F;( Latitude )&#x200F;</label>
+              <input type="number" step="0.000001" id="placeLatInput" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="placeLngInput">خط الطول &#x200F;( Longitude )&#x200F;</label>
+              <input type="number" step="0.000001" id="placeLngInput" class="form-control" required>
+            </div>
+          </div>
+          <small id="coordsHint" style="color: var(--text-muted); display: block; margin-top: -8px; margin-bottom: 12px;"></small>
+
+          <div class="form-group">
+            <label for="placeNotesInput">الملاحظات والتفاصيل الميدانية</label>
+            <textarea id="placeNotesInput" class="form-control" placeholder="اكتب ملاحظاتك، تفاصيل الموقع، أرقام هواتف، أو أي بيانات ترغب بحفظها هنا..."></textarea>
           </div>
 
-          <div class="ctrl-group">
-            <label for="sketch-select">تظليل القلم والحبر (NPR Shader):</label>
-            <select id="sketch-select" class="sketch-select">
-              <option value="sketch">الرسم الهندسي بالقلم (Clean Sketch)</option>
-              <option value="pencil">تهشير القلم الرصاص (Soft Pencil)</option>
-              <option value="inkwash">الحبر والغسيل (Ink & Wash)</option>
-              <option value="vivid">الألوان المعمارية الحية (Vivid)</option>
-            </select>
+          <div class="form-group">
+            <label for="placeTagsInput">وسوم إضافية &#x200F;( مفصولة بفاصلة )&#x200F;</label>
+            <input type="text" id="placeTagsInput" class="form-control" placeholder="مثال: رحلة، زيارة، مهم، مسار">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel-btn">إلغاء</button>
+          <button type="submit" class="btn btn-primary">💾 حفظ في المتصفح</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- نافذة منبثقة: تبديل طبقات وأنماط الخريطة -->
+  <div id="layersModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><span>🛰️</span> اختيار نمط وطبقة الخريطة</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="layers-grid">
+          <div class="layer-card-option selected" data-layer="osm">
+            <div class="layer-preview-icon">🛣️</div>
+            <strong>شوارع أوبن ستريت ماب</strong>
+            <small>تغطية شاملة وتفاصيل دقيقة للطرق والبنايات والمدن العراقية</small>
+          </div>
+
+          <div class="layer-card-option" data-layer="hot">
+            <div class="layer-preview-icon">🏛️</div>
+            <strong>الخريطة الملونة عالية التباين</strong>
+            <small>نمط إنساني ملون مع تمييز فائق للأحياء والمعالم بأسماء عربية</small>
+          </div>
+
+          <div class="layer-card-option" data-layer="satellite">
+            <div class="layer-preview-icon">🛰️</div>
+            <strong>القمر الصناعي الفضائي</strong>
+            <small>صور فضائية فائقة الدقة من Esri لبلاد الرافدين والجبال والأهوار</small>
+          </div>
+
+          <div class="layer-card-option" data-layer="topo">
+            <div class="layer-preview-icon">⛰️</div>
+            <strong>خريطة التضاريس والارتفاعات</strong>
+            <small>تجسيم ثلاثي الأبعاد للجبال والهضاب ومجاري الأنهار في العراق</small>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <button type="button" class="sketch-btn" id="toggle-hud-btn" title="إخفاء أو إظهار اللوحة لرؤية النموذج بالكامل">
-      <span>إخفاء/إظهار الواجهة</span>
-      <kbd>Tab</kbd>
-    </button>
+  <!-- نافذة منبثقة: اختيار الشخصيات والمجسمات ثلاثية الأبعاد الحقيقية المتحركة (3D WebGL) -->
+  <div id="avatar3DModal" class="modal-backdrop">
+    <div class="modal-card wide-modal">
+      <div class="modal-header">
+        <h3><span>🚶</span> المجسمات ثلاثية الأبعاد</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- مساحة المعاينة التفاعلية المباشرة للـ 3D -->
+        <div class="preview-3d-box">
+          <canvas id="avatarPreviewCanvas" class="preview-3d-canvas"></canvas>
+          <div class="preview-3d-hint">
+            <span>🖱️ اسحب لتدوير المجسم 360°</span>
+          </div>
+        </div>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+        <h4 style="margin: 14px 0 10px; font-size: 0.95rem;">اختر المجسم:</h4>
+        <div id="models3DGrid" class="models-3d-grid"></div>
+      </div>
+      <div class="modal-footer" style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+        <button type="button" id="launchRoamFromAvatarModalBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #d97706, #f59e0b); border:none; font-size: 1.2rem; padding: 8px 18px;" title="🎮">🎮</button>
+        <button type="button" class="btn btn-secondary modal-close-btn">اعتماد وحفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة منبثقة: تحميل وتثبيت الخريطة للعمل أوفلاين وتطبيق PWA -->
+  <div id="offlineModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><span>📥</span> العمل بدون إنترنت وتثبيت التطبيق &#x200F;( PWA )&#x200F;</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="offline-status-box">
+          <div class="status-row">
+            <span>حالة الجاهزية أوفلاين:</span>
+            <span id="offlineStatusBadge" class="status-badge-pending">جاري الفحص...</span>
+          </div>
+          <div class="status-row">
+            <span>البلاطات المخزنة في المتصفح:</span>
+            <strong id="offlineTilesCount">0 ملف</strong>
+          </div>
+        </div>
+
+        <div style="margin: 18px 0;">
+          <h4 style="margin-bottom: 6px;">تحميل حزمة خرائط العراق أوفلاين:</h4>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+            يقوم بتنزيل وتخزين كافة بلاطات وشخصيات العراق في ذاكرة المتصفح بحيث تعمل الخريطة والملاحة وتحديد الـ GPS حتى لو انقطع الإنترنت تماماً.
+          </p>
+          
+          <button id="startOfflineDownloadBtn" class="btn btn-primary" style="width: 100%; padding: 12px;">
+            🚀 تحميل وتثبيت خريطة العراق أوفلاين بنقرة واحدة
+          </button>
+
+          <div id="offlineProgressBar" class="progress-bar-container" style="display: none; margin-top: 12px;">
+            <div class="progress-bar-track">
+              <div id="offlineProgressFill" class="progress-bar-fill"></div>
+            </div>
+            <small id="offlineProgressText" class="progress-bar-text">جاري بدء التحميل...</small>
+          </div>
+        </div>
+
+        <hr style="opacity: 0.15; margin: 18px 0;">
+
+        <div>
+          <h4 style="margin-bottom: 6px;">تثبيت نظام SMI على جهازك:</h4>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px;">
+            تثبيت نظام SMI كأيقونة تطبيق مستقلة على هاتفك أو حاسوبك تعمل مباشرة بضغطة واحدة.
+          </p>
+          <button id="pwaInstallActionBtn" class="btn btn-secondary" style="width: 100%;">
+            📲 تثبيت التطبيق على الشاشة الرئيسية
+          </button>
+        </div>
+
+        <div style="margin-top: 14px; text-align: center;">
+          <button id="clearOfflineCacheBtn" class="popup-btn danger" style="padding: 6px 12px;">
+            🗑️ مسح الذاكرة المؤقتة لتحرير المساحة
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       منظومة SOCIALMAP المتكاملة: التكسي، المنيو والتسوق، مجسمات 3D، البث الحي، ومدينة العراق 3D (CityRT)
+       ====================================================================== -->
+
+  <!-- 1. درج طلب سيارة أجرة أو توصيل (Pin-to-Ride Taxi Drawer) -->
+  <div id="socialmapTaxiDrawer" class="socialmap-drawer-backdrop hidden" aria-hidden="true">
+    <div class="socialmap-drawer-card">
+      <div class="socialmap-drawer-header">
+        <div>
+          <h3>🚖 طلب سيارة أجرة أو توصيل فوري</h3>
+          <p id="taxiDestinationLabel" class="drawer-subtitle">📍 إلى: الموقع المحدد</p>
+        </div>
+        <button type="button" id="closeTaxiDrawerBtn" class="drawer-close-btn">✕</button>
+      </div>
+      <div class="socialmap-drawer-body">
+        <div id="taxiRouteMetaLabel" class="taxi-route-meta-banner">📏 جاري حساب المسار والتسعيرة بالدينار العراقي...</div>
+        <div id="taxiTiersList" class="taxi-tiers-list"></div>
+
+        <div class="taxi-payment-row">
+          <label>💳 وسيلة الدفع:</label>
+          <select id="taxiPaymentSelect" class="form-control">
+            <option value="نقداً عند الوصول">💵 نقداً عند الوصول (Cash IQD)</option>
+            <option value="زين كاش ZainCash">📱 محفظة زين كاش (ZainCash)</option>
+            <option value="بطاقة كي كارد QiCard">💳 بطاقة كي كارد / ماستر كارد (QiCard)</option>
+            <option value="مصرف العراق الأول FIB">🏦 مصرف العراق الأول (FIB)</option>
+          </select>
+        </div>
+      </div>
+      <div class="socialmap-drawer-footer">
+        <button type="button" id="taxiConfirmBookingBtn" class="btn btn-primary full-width-btn">
+          🚖 تأكيد طلب سيارة الأجرة الآن
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. درج المنيو والتسوق المكاني والطوابق المتعددة (Pin-to-Shop & Dine Drawer) -->
+  <div id="socialmapCommerceDrawer" class="socialmap-drawer-backdrop hidden" aria-hidden="true">
+    <div class="socialmap-drawer-card wide-drawer">
+      <div class="socialmap-drawer-header">
+        <div>
+          <span id="commercePlaceBadge" class="commerce-header-badge">🍽️ منيو وتسوق حي</span>
+          <h3 id="commercePlaceTitle">اسم المطعم أو المول</h3>
+          <p id="commercePlaceMeta" class="drawer-subtitle">⭐ 4.9 · توصيل سريع</p>
+        </div>
+        <button type="button" id="closeCommerceDrawerBtn" class="drawer-close-btn">✕</button>
+      </div>
+      <div class="socialmap-drawer-body">
+        <!-- شريط اختيار الطابق للمولات (G, 1, 2, 3) -->
+        <div id="commerceFloorsBar" class="commerce-floors-bar hidden"></div>
+        <!-- تبويبات الأقسام -->
+        <div id="commerceCategoryTabs" class="commerce-category-tabs"></div>
+        <!-- شبكة الوجبات والمنتجات مع أزرار معاينة 3D والإضافة للسلة -->
+        <div id="commerceItemsGrid" class="commerce-items-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. نافذة إتمام الشراء والسلة (Cart Checkout Modal) -->
+  <div id="socialmapCartCheckoutModal" class="socialmap-drawer-backdrop hidden" aria-hidden="true">
+    <div class="socialmap-drawer-card">
+      <div class="socialmap-drawer-header">
+        <div>
+          <h3>🛒 سلة المشتريات والتوصيل للموقع</h3>
+          <p class="drawer-subtitle">مراجعة الطلبات وإرسال مندوب التوصيل مباشرة على الخريطة</p>
+        </div>
+        <button type="button" id="closeCartCheckoutBtn" class="drawer-close-btn">✕</button>
+      </div>
+      <div class="socialmap-drawer-body">
+        <div id="checkoutItemsList" class="checkout-items-list"></div>
+        <div id="checkoutPriceSummary" class="checkout-price-summary"></div>
+        <div class="taxi-payment-row">
+          <label>💳 طريقة الدفع:</label>
+          <select id="commercePaymentSelect" class="form-control">
+            <option value="نقداً عند الاستلام">💵 الدفع نقداً عند الاستلام (IQD)</option>
+            <option value="زين كاش ZainCash">📱 زين كاش (ZainCash)</option>
+            <option value="كي كارد QiCard">💳 كي كارد / الرافدين (QiCard)</option>
+            <option value="مصرف العراق الأول FIB">🏦 مصرف العراق الأول (FIB)</option>
+          </select>
+        </div>
+      </div>
+      <div class="socialmap-drawer-footer">
+        <button type="button" id="confirmOrderDispatchBtn" class="btn btn-primary full-width-btn">
+          🛵 تأكيد الشراء وإرسال التوصيل الآن
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. مسرح الوسائط التفاعلي: مجسمات 360° 3D + صور HD + فيديو (Rich Media 3D Stage) -->
+  <div id="socialmapMedia3DModal" class="socialmap-drawer-backdrop hidden" aria-hidden="true">
+    <div class="socialmap-drawer-card wide-drawer">
+      <div class="socialmap-drawer-header">
+        <div>
+          <h3 id="media3DStageTitle">🧊 استعراض المجسم ثلاثي الأبعاد 360°</h3>
+          <p id="media3DStageSubtitle" class="drawer-subtitle">اسحب لتدوير المجسم أو التبديل بين الصور والفيديو</p>
+        </div>
+        <button type="button" id="closeMedia3DModalBtn" class="drawer-close-btn">✕</button>
+      </div>
+      <div class="socialmap-drawer-body">
+        <div class="media-stage-tabs">
+          <button type="button" class="media-tab-btn active" data-media-tab="3d">🧊 مجسم ثلاثي الأبعاد 360°</button>
+          <button type="button" class="media-tab-btn" data-media-tab="photos">🖼️ ألبوم الصور HD</button>
+          <button type="button" class="media-tab-btn" data-media-tab="video">🎬 عرض الفيديو السينمائي</button>
+        </div>
+
+        <!-- تبويب المجسم 3D -->
+        <div id="mediaStage3DContainer" class="media-stage-3d-container">
+          <div id="mediaStage3DCanvasWrap" class="media-stage-3d-canvas-wrap"></div>
+          <div class="media-stage-3d-controls">
+            <div class="media-size-group">
+              <span>الحجم:</span>
+              <button type="button" class="media-ctrl-btn" data-media-size="0.8" data-size-label="صغير (S)">صغير S</button>
+              <button type="button" class="media-ctrl-btn active" data-media-size="1" data-size-label="قياسي (M)">وسط M</button>
+              <button type="button" class="media-ctrl-btn" data-media-size="1.25" data-size-label="كبير عائلي (L)">كبير L</button>
+            </div>
+            <div class="media-light-group">
+              <span>الإضاءة:</span>
+              <button type="button" class="media-ctrl-btn" data-media-light="day">☀️ نهاري</button>
+              <button type="button" class="media-ctrl-btn active" data-media-light="warm">🕯️ دافئ</button>
+              <button type="button" class="media-ctrl-btn" data-media-light="neon">✨ نيون</button>
+            </div>
+          </div>
+          <div class="media-stage-meta-bar">
+            <span id="media3DStageDims">📐 الأبعاد الحقيقية: 35 × 25 × 12 سم</span>
+            <strong id="media3DStagePrice">25,000 د.ع</strong>
+          </div>
+        </div>
+
+        <!-- تبويب الصور -->
+        <div id="mediaStagePhotosContainer" class="media-stage-photos-container hidden"></div>
+
+        <!-- تبويب الفيديو -->
+        <div id="mediaStageVideoContainer" class="media-stage-video-container hidden">
+          <canvas id="mediaStageVideoCanvas" class="media-stage-video-canvas"></canvas>
+        </div>
+      </div>
+      <div class="socialmap-drawer-footer">
+        <button type="button" id="media3DOrderItemBtn" class="btn btn-primary full-width-btn">
+          🛒 أضف هذا العنصر إلى السلة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. نافذة البث المباشر للكاميرات الحية في المواقع (Live Location Cameras Modal) -->
+  <div id="socialmapLiveCamModal" class="socialmap-drawer-backdrop hidden" aria-hidden="true">
+    <div class="socialmap-drawer-card wide-drawer">
+      <div class="socialmap-drawer-header">
+        <div>
+          <h3 id="liveCamPlaceTitle">🔴 بث مباشر من الموقع</h3>
+          <p id="liveCamAngleTitle" class="drawer-subtitle">الكاميرا الرئيسية — توقيت بغداد الحي</p>
+        </div>
+        <div class="live-cam-header-actions">
+          <button type="button" id="liveCamPiPBtn" class="btn btn-secondary btn-sm" title="تصغير كنافذة عائمة أثناء تصفح الخريطة">🗗 نافذة عائمة PiP</button>
+          <button type="button" id="closeLiveCamModalBtn" class="drawer-close-btn">✕</button>
+        </div>
+      </div>
+      <div class="socialmap-drawer-body">
+        <div class="live-cam-status-strip">
+          <span class="live-red-dot-pill">🔴 LIVE مباشر</span>
+          <span id="liveCamViewersCount">👁️ 120 مشاهد الآن</span>
+          <span id="liveCamCrowdBadge">🟢 الحركة طبيعية</span>
+          <button type="button" id="liveCamSnapshotBtn" class="live-snapshot-btn">📸 التقاط صورة</button>
+        </div>
+
+        <div class="live-cam-canvas-wrap">
+          <canvas id="liveCamStreamCanvas" width="760" height="420"></canvas>
+        </div>
+
+        <div id="liveCamAnglesSwitcher" class="live-cam-angles-switcher"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. وضع التجول الحي التفاعلي فوق الخريطة الحقيقية (SMI 3D Live Roaming Engine) -->
+  <div id="cityrt3DModal" class="cityrt-fullscreen-modal hidden" aria-hidden="true">
+    <!-- زر المتحكم المدمج 🎮 لفتح/إغلاق شريط إعدادات التجول الحي + زر الخروج السريع -->
+    <div class="roam-compact-trigger-bar">
+      <button type="button" id="roamHudToggleBtn" class="roam-controller-emoji-btn" title="فتح / إغلاق إعدادات التجول والشخصيات" aria-expanded="false">🎮</button>
+      <span id="cityrtLocationTitle" class="roam-mini-loc-pill">بغداد</span>
+      <button type="button" id="closeCityRT3DBtn" class="roam-mini-exit-btn" title="العودة للخريطة">✖️</button>
+    </div>
+
+    <!-- شريط إعدادات التجول الحي القابل للفتح والإغلاق عند ضغط زر 🎮 -->
+    <div id="roamSettingsDrawer" class="cityrt-top-hud collapsed">
+      <div class="cityrt-hud-top-row">
+        <div class="cityrt-hud-brand">
+          <small id="cityrtLiveCoordsBadge" class="cityrt-coords-pill">33.31520°N, 44.36610°E</small>
+        </div>
+
+        <div class="cityrt-nav-modes">
+          <button type="button" class="cityrt-hud-btn active" data-cityrt-nav="roam" title="تتبع المجسم">🕹️ تتبع</button>
+          <button type="button" class="cityrt-hud-btn" data-cityrt-nav="first" title="منظور الشخص الأول">👁️ منظور أول</button>
+          <button type="button" class="cityrt-hud-btn" data-cityrt-nav="orbit" title="كاميرا مدارية حرة">🦅 حر</button>
+          <button type="button" class="cityrt-hud-btn" id="cityrtSketchToggleBtn" title="فلتر الرسم الهندسي">✏️ رسم</button>
+        </div>
+
+        <div class="cityrt-atmosphere-controls">
+          <label class="cityrt-time-slider-wrap" title="تغيير وقت الإضاءة (24 ساعة)">
+            <span>🕒 <b id="cityrtTimeValueLabel">16:30</b></span>
+            <input type="range" id="cityrtTimeSlider" min="0" max="24" step="0.25" value="16.5">
+          </label>
+          <select id="cityrtWeatherSelect" class="cityrt-weather-select" title="تغيير حالة الطقس">
+            <option value="clear">☀️ صحو</option>
+            <option value="rain">🌧️ مطر</option>
+            <option value="dust">🌪️ غبار</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- شريط اختيار الشخصية للتجول الحي -->
+      <div class="cityrt-avatar-bar-wrap">
+        <span class="avatar-bar-label">الشخصية:</span>
+        <div id="cityrtAvatarStrip" class="cityrt-avatar-strip"></div>
+      </div>
+    </div>
+
+    <!-- شريط الملاحة الآلية للشخصية عند البحث عن منطقة في وضع التجول -->
+    <div id="roamAutoNavBanner" class="roam-autonav-banner hidden">
+      <div class="autonav-info">
+        <span class="autonav-icon">🧭</span>
+        <div>
+          <strong id="roamAutoNavTitle">ملاحة آلية نحو الوجهة</strong>
+          <small id="roamAutoNavDist">جاري الانتقال بالشخصية...</small>
+        </div>
+      </div>
+      <div class="autonav-actions">
+        <button type="button" id="roamAutoNavToggleBtn" class="autonav-btn primary" title="إيقاف مؤقت / استئناف الملاحة الآلية">⏸️ إيقاف مؤقت</button>
+        <button type="button" id="roamAutoNavTaxiBtn" class="autonav-btn taxi" title="طلب سيارة أجرة أو توصيل لهذا المكان">🚖 تكسي</button>
+        <button type="button" id="roamAutoNavShopBtn" class="autonav-btn shop" title="تصفح المنيو والتسوق والتوصيل">🛍️ تسوق</button>
+        <button type="button" id="roamAutoNavHubBtn" class="autonav-btn hub" title="عرض نافذة معلومات وخدمات المكان">🏢 خدمات</button>
+        <button type="button" id="roamAutoNavStopBtn" class="autonav-btn danger" title="إنهاء الملاحة الآلية">✖️</button>
+      </div>
+    </div>
+
+    <!-- فقاعة حديث الروبوت بلغة الآلات جاكس (Robot Speech Bubble) -->
+    <div id="robotSpeechBubble" class="robot-speech-bubble hidden">
+      <span class="robot-wave-badge">🤖 JAX-AI</span>
+      <p id="robotSpeechText">جاري مسح البنية المعمارية بالليزر الضوئي...</p>
+    </div>
+
+    <!-- مسرح WebGL Three.js + ترس التحرك الشفاف الأيسر + أزرار الإجراءات اليمنى -->
+    <div id="cityrtCanvasContainer" class="cityrt-canvas-container"></div>
+
+    <!-- عداد السرعة وحالة التسلق / الملامسة -->
+    <div class="cityrt-bottom-hud">
+      <div id="cityrtSpeedHud" class="cityrt-speed-hud">
+        <strong id="cityrtSpeedValue">0</strong>
+        <span>كم/س</span>
+      </div>
+      <div id="roamTouchStatusPill" class="roam-touch-status-pill hidden">
+        <span id="roamTouchStatusText">🏢 لامست بناية — اضغط زر الإجراء 🔓 لعرض المعلومات</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- حاوية إشعارات التنبيه (Toasts) -->
+  <div id="toast-container"></div>
+
+  <!-- مكتبة Leaflet الأساسية للخرائط -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- تشغيل التطبيق كـ ES Module مع كسر التخزين المؤقت v16 -->
+  <script type="module" src="./js/app.js?v=16"></script>
+</body>
 </html>
-

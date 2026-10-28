@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA & Asset Routing for smi.bashartwaij.com
+/omi https://smi.bashartwaij.com/ 301
+/* /index.html 200
+
